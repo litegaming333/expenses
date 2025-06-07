@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <meta charset="UTF-8" />
+  <title>Expense Tracker</title>
+
+  <!-- PWA Support -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#007bff">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('Service Worker registered:', reg))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <div class="container">
+
+    <!-- AUTH UI -->
+    <div id="auth-section">
+      <h2>Login / Register</h2>
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button onclick="login()">Login</button>
+      <button onclick="signup()">Register</button>
+    </div>
+
+    <!-- APP UI -->
+    <div id="app-section" style="display: none;">
+      <h1>My Expense Tracker</h1>
+      <button onclick="logout()">Logout</button>
+      <h2>Total Balance: ₹<span id="balance">0</span></h2>
+
+      <form id="expense-form">
+        <input type="hidden" id="edit-id" />
+        <label>Type:
+          <select id="type" required>
+            <option value="add">Add</option>
+            <option value="withdraw">Withdraw</option>
+          </select>
+        </label>
+        <label>Amount:
+          <input type="number" id="amount" required />
+        </label>
+        <label>Note:
+          <input type="text" id="note" />
+        </label>
+        <label>Date:
+          <input type="date" id="date" required />
+        </label>
+        <button type="submit">Save</button>
+      </form>
+
+      <h2>Transaction History</h2>
+      <ul id="history" style="max-height: 300px; overflow-y: auto;"></ul>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
