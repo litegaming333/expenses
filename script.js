@@ -2,7 +2,6 @@ const SUPABASE_URL = 'https://hyysjujdyvbcuzbgaqxp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eXNqdWpkeXZiY3V6YmdhcXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyODc5ODQsImV4cCI6MjA2NDg2Mzk4NH0.m7s-KYb2CrsZXYrvAPGK8Z61GknH-5_UKULqj1n5jIk';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
 let currentUser = null;
 
 async function checkUser() {
@@ -79,8 +78,12 @@ async function loadHistory() {
   if (data) {
     data.forEach(item => {
       const li = document.createElement('li');
+
+      // Format date to dd/mm/yyyy
+      const formattedDate = new Date(item.date).toLocaleDateString('en-GB');
+
       li.innerHTML = `
-        ${item.date} — ₹${item.amount} (${item.type}) ${item.note ? '- ' + item.note : ''}
+        ${formattedDate} — ₹${item.amount} (${item.type}) ${item.note ? '- ' + item.note : ''}
         <span class="actions">
           <button onclick="editTransaction('${item.id}')">Edit</button>
           <button onclick="deleteTransaction('${item.id}')">Delete</button>
