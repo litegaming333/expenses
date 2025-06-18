@@ -1,31 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta charset="UTF-8" />
   <title>Expense Tracker</title>
 
   <!-- PWA Support -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#007bff">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('Service Worker registered:', reg))
-          .catch(err => console.log('Service Worker registration failed:', err));
-      });
-    }
-  </script>
 
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  
+  <style>
+  .dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+
+  .dark-mode input,
+  .dark-mode select,
+  .dark-mode button,
+  .dark-mode ul li {
+    background-color: #1e1e1e;
+    color: #fff;
+    border-color: #333;
+  }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .toggle-btn {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .toggle-btn:hover {
+    background: #555;
+  }
+</style>
+
+  
+  
 </head>
 <body>
   <div class="container">
+	  
+	  
+	  
+	  <div class="top-bar">
+  <button class="dark-toggle" onclick="toggleDarkMode()">🌓</button>
+</div>
+
 
     <!-- AUTH UI -->
     <div id="auth-section">
@@ -39,7 +73,8 @@
     <!-- APP UI -->
     <div id="app-section" style="display: none;">
       <h1>My Expense Tracker</h1>
-      <button onclick="logout()">Logout</button>
+      <p id="login-info"></p>
+      <button onclick="logout()" class="logout-btn">Logout</button>
       <h2>Total Balance: ₹<span id="balance">0</span></h2>
 
       <form id="expense-form">
@@ -62,11 +97,109 @@
         <button type="submit">Save</button>
       </form>
 
-      <h2>Transaction History</h2>
-      <ul id="history" style="max-height: 300px; overflow-y: auto;"></ul>
+      <button onclick="window.location.href='history.html'">Go to History</button>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://hyysjujdyvbcuzbgaqxp.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eXNqdWpkeXZiY3V6YmdhcXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyODc5ODQsImV4cCI6MjA2NDg2Mzk4NH0.m7s-KYb2CrsZXYrvAPGK8Z61GknH-5_UKULqj1n5jIk';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentUser = null;
+
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      currentUser = session?.user || null;
+      updateUI();
+      if (currentUser) {
+        document.getElementById('login-info').textContent = `Logged in as: ${currentUser.email}`;
+        loadBalance();
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('auth-section').style.display = currentUser ? 'none' : 'block';
+      document.getElementById('app-section').style.display = currentUser ? 'block' : 'none';
+    }
+
+    async function signup() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) alert(error.message);
+      else alert('Signup successful. Check your email if confirmation is required.');
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+      else checkUser();
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      currentUser = null;
+      updateUI();
+    }
+
+    document.getElementById('expense-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const type = document.getElementById('type').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const note = document.getElementById('note').value;
+      const date = document.getElementById('date').value;
+      const editId = document.getElementById('edit-id').value;
+
+      if (!type || isNaN(amount) || !date) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      if (editId) {
+        await supabase.from('transactions').update({ type, amount, note, date }).eq('id', editId);
+        document.getElementById('edit-id').value = '';
+      } else {
+        await supabase.from('transactions').insert([{ type, amount, note, date, user_id: currentUser.id }]);
+      }
+
+      document.getElementById('expense-form').reset();
+      loadBalance();
+    });
+
+    async function loadBalance() {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', currentUser.id);
+
+      let total = 0;
+      if (data) {
+        data.forEach(item => {
+          total += item.type === 'add' ? item.amount : -item.amount;
+        });
+      }
+      document.getElementById('balance').textContent = total.toFixed(2);
+    }
+
+    checkUser();
+  </script>
+  
+  
+  <script>
+  function toggleDarkMode() {
+    const isDark = document.body.classList.toggle("dark-mode");
+    localStorage.setItem("dark-mode", isDark ? "enabled" : "disabled");
+  }
+
+  window.onload = () => {
+    if (localStorage.getItem("dark-mode") === "enabled") {
+      document.body.classList.add("dark-mode");
+    }
+  };
+</script>
+
 </body>
 </html>
