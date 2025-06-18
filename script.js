@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://hyysjujdyvbcuzbgaqxp.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eXNqdWpkeXZiY3V6YmdhcXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyODc5ODQsImV4cCI6MjA2NDg2Mzk4NH0.m7s-KYb2CrsZXYrvAPGK8Z61GknH-5_UKULqj1n5jIk';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eXNqdWpkeXZiY3V6YmdhcXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyODc5ODQsImV4cCI6MjA2NDg2Mzk4NH0.m7s-KYb2CrsZXYrvAPGK8Z61GknH-5_UKULqj1n5jIk'; // Truncated for safety
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
@@ -14,24 +14,23 @@ async function checkUser() {
 function updateUI() {
   document.getElementById('auth-section').style.display = currentUser ? 'none' : 'block';
   document.getElementById('app-section').style.display = currentUser ? 'block' : 'none';
+  if (currentUser) {
+    document.getElementById('login-info').textContent = `Logged in as: ${currentUser.email}`;
+  }
 }
 
 async function signup() {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
-
   const { error } = await supabase.auth.signUp({ email, password });
-  if (error) alert(error.message);
-  else alert('Signup successful. Check your email if confirmation is required.');
+  alert(error ? error.message : 'Signup successful. Check your email.');
 }
 
 async function login() {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
-
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) alert(error.message);
-  else checkUser();
+  error ? alert(error.message) : checkUser();
 }
 
 async function logout() {
@@ -47,11 +46,7 @@ document.getElementById('expense-form').addEventListener('submit', async (e) => 
   const note = document.getElementById('note').value;
   const date = document.getElementById('date').value;
   const editId = document.getElementById('edit-id').value;
-
-  if (!type || isNaN(amount) || !date) {
-    alert('Please fill in all required fields.');
-    return;
-  }
+  if (!type || isNaN(amount) || !date) return alert('Please fill in all fields.');
 
   if (editId) {
     await supabase.from('transactions').update({ type, amount, note, date }).eq('id', editId);
@@ -65,23 +60,15 @@ document.getElementById('expense-form').addEventListener('submit', async (e) => 
 });
 
 async function loadHistory() {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('date', { ascending: false });
-
+  const { data } = await supabase.from('transactions').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
   const historyList = document.getElementById('history');
   historyList.innerHTML = '';
   let total = 0;
 
   if (data) {
     data.forEach(item => {
-      const li = document.createElement('li');
-
-      // Format date to dd/mm/yyyy
       const formattedDate = new Date(item.date).toLocaleDateString('en-GB');
-
+      const li = document.createElement('li');
       li.innerHTML = `
         ${formattedDate} — ₹${item.amount} (${item.type}) ${item.note ? '- ' + item.note : ''}
         <span class="actions">
@@ -113,5 +100,14 @@ async function editTransaction(id) {
   document.getElementById('date').value = data.date;
   document.getElementById('edit-id').value = data.id;
 }
+
+// Dark mode toggle
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+}
+
+document.getElementById('dark-toggle').addEventListener('click', toggleDarkMode);
+if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
 
 checkUser();
