@@ -1,8 +1,10 @@
+/* Base Theme */
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   background: #f0f2f5;
   margin: 0;
   padding: 0;
+  transition: background 0.3s, color 0.3s;
 }
 
 .container {
@@ -57,13 +59,53 @@ ul li {
   font-size: 16px;
 }
 
-/* Scrollable history */
 #history {
-  max-height: 300px;  /* fixed height for scrolling */
+  max-height: 300px;
   overflow-y: auto;
-  padding-right: 10px; /* prevent text hiding behind scrollbar */
+  padding-right: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #fff;
   margin-top: 10px;
+}
+
+/* Dark Mode */
+body.dark-mode {
+  background: #181818;
+  color: #f0f0f0;
+}
+
+body.dark-mode .container {
+  background: #242424;
+  box-shadow: 0 0 12px rgba(255,255,255,0.05);
+}
+
+body.dark-mode input,
+body.dark-mode select {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+body.dark-mode ul li {
+  background: #2e2e2e;
+}
+
+.dark-toggle {
+  float: right;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #007bff;
+}
+
+/* Login info display */
+#login-info {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #333;
+}
+body.dark-mode #login-info {
+  color: #ccc;
 }
