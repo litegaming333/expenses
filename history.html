@@ -2,140 +2,152 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transaction History</title>
-  <link rel="stylesheet" href="style.css">
+  <title>History - Expense Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
-    body.dark-mode {
-      background-color: #121212;
-      color: #e0e0e0;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
+    body {
+      font-family: sans-serif;
       padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      background: #f5f5f5;
+      color: #222;
+      transition: background 0.3s, color 0.3s;
     }
 
-    .dark-mode .container {
-      background: #1e1e1e;
+    body.dark {
+      background: #121212;
+      color: #eee;
     }
 
-    .history-item {
-      background: #f9f9f9;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 8px;
-      font-size: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .dark-mode .history-item {
-      background: #2c2c2c;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .toggle-btn {
-      background: #333;
-      color: #fff;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .back-btn {
-      display: inline-block;
-      margin-bottom: 15px;
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: #fff;
-      text-decoration: none;
+    ul li {
+      margin: 10px 0;
+      padding: 10px;
+      background: #e1e1e1;
       border-radius: 6px;
     }
 
-    .back-btn:hover {
-      background-color: #0056b3;
+    body.dark ul li {
+      background: #1e1e1e;
+    }
+
+    button {
+      margin: 5px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #2e8b57;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #246b45;
+    }
+
+    .logout-btn {
+      background: #c0392b;
+    }
+
+    .logout-btn:hover {
+      background: #992d22;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="top-bar">
-      <h2>Transaction History</h2>
-      <button class="toggle-btn" onclick="toggleDarkMode()">🌙</button>
-    </div>
-    <a class="back-btn" href="tracker.html">⬅ Back to Tracker</a>
-    <div id="history-list">Loading...</div>
+    <h1>Transaction History</h1>
+    <div id="user-info"></div>
+    <button onclick="window.location.href='tracker.html'">Go Back</button>
+    <button id="dark-toggle">Toggle Dark Mode</button>
+    <button onclick="logout()" class="logout-btn">Logout</button>
+
+    <ul id="history" style="margin-top: 20px;"></ul>
   </div>
 
   <script>
     const SUPABASE_URL = 'https://hyysjujdyvbcuzbgaqxp.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5eXNqdWpkeXZiY3V6YmdhcXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyODc5ODQsImV4cCI6MjA2NDg2Mzk4NH0.m7s-KYb2CrsZXYrvAPGK8Z61GknH-5_UKULqj1n5jIk';
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function loadHistory() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
+    let currentUser = null;
 
-      if (!user) {
-        alert('You are not logged in!');
-        window.location.href = 'tracker.html';
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      currentUser = session?.user || null;
+
+      if (!currentUser) {
+        window.location.href = "tracker.html";
         return;
       }
 
+      document.getElementById("user-info").textContent = `Logged in as: ${currentUser.email}`;
+      loadHistory();
+      applyDarkMode();
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      window.location.href = "tracker.html";
+    }
+
+    async function loadHistory() {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .order('date', { ascending: false });
 
-      const listDiv = document.getElementById('history-list');
-      listDiv.innerHTML = '';
+      const historyList = document.getElementById('history');
+      historyList.innerHTML = '';
 
-      if (error || !data.length) {
-        listDiv.innerHTML = '<p>No transactions found.</p>';
-        return;
+      if (data && data.length > 0) {
+        data.forEach(item => {
+          const formattedDate = new Date(item.date).toLocaleDateString('en-GB');
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>${formattedDate}</strong> — ₹${item.amount} (${item.type})
+            ${item.note ? `- ${item.note}` : ''}
+            <div style="margin-top: 5px;">
+              <button onclick="editTransaction('${item.id}')">Edit</button>
+              <button onclick="deleteTransaction('${item.id}')">Delete</button>
+            </div>
+          `;
+          historyList.appendChild(li);
+        });
+      } else {
+        historyList.innerHTML = '<li>No transactions found.</li>';
       }
-
-      data.forEach(txn => {
-        const date = new Date(txn.date).toLocaleDateString('en-GB');
-        const el = document.createElement('div');
-        el.className = 'history-item';
-        el.innerHTML = `
-          <div>
-            <strong>${txn.type === 'add' ? '+' : '-'} ₹${txn.amount}</strong><br/>
-            ${txn.note || 'No note'}<br/>
-            <small>${date}</small>
-          </div>
-        `;
-        listDiv.appendChild(el);
-      });
     }
 
-    function toggleDarkMode() {
-      const isDark = document.body.classList.toggle('dark-mode');
-      localStorage.setItem('dark-mode', isDark ? 'enabled' : 'disabled');
-    }
-
-    window.onload = () => {
-      if (localStorage.getItem('dark-mode') === 'enabled') {
-        document.body.classList.add('dark-mode');
-      }
+    async function deleteTransaction(id) {
+      if (!confirm("Are you sure you want to delete this transaction?")) return;
+      await supabase.from('transactions').delete().eq('id', id);
       loadHistory();
-    };
+    }
+
+    async function editTransaction(id) {
+      const { data } = await supabase.from('transactions').select('*').eq('id', id).single();
+      if (!data) return alert('Transaction not found');
+
+      localStorage.setItem('edit-transaction', JSON.stringify(data));
+      window.location.href = 'tracker.html';
+    }
+
+    // Dark mode toggle
+    const darkToggleBtn = document.getElementById('dark-toggle');
+    darkToggleBtn.addEventListener('click', () => {
+      const isDark = document.body.classList.toggle('dark');
+      localStorage.setItem('dark-mode', isDark);
+    });
+
+    function applyDarkMode() {
+      const isDark = localStorage.getItem('dark-mode') === 'true';
+      if (isDark) document.body.classList.add('dark');
+    }
+
+    checkUser();
   </script>
 </body>
 </html>
